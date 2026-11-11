@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <!-- WinForms only for NotifyIcon/ContextMenuStrip, SystemEvents and GDI+ (System.Drawing). -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Lets the project build (not run) on Linux/macOS, e.g. in a cloud container. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\TinyHand.ico</ApplicationIcon>
+    <AssemblyName>TinyHand</AssemblyName>
+    <RootNamespace>TinyHand</RootNamespace>
+    <Version>0.1.0</Version>
+    <Product>TinyHand</Product>
+    <Description>A tiny hand on a stick that points at things on your screen (Windows port).</Description>
+    <Copyright>Copyright (c) 2026 Kamran Ahmed. Windows port under the same MIT license.</Copyright>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <!-- WPF app: DPI awareness belongs in app.manifest (PerMonitorV2), not in the WinForms API. -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\Hands\*.png" LogicalName="hands/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Assets\Sounds\*.wav" LogicalName="sounds/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Assets\tray_on.png;Assets\tray_off.png;Assets\AppIcon.png" LogicalName="%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>
