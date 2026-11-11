@@ -1,0 +1,115 @@
+name: Windows
+
+on:
+  push:
+    branches: [windows-port, 'claude/**']
+    tags: ['win-v*']
+    paths:
+      - 'windows/**'
+      - '.github/workflows/windows.yml'
+  pull_request:
+    paths:
+      - 'windows/**'
+      - '.github/workflows/windows.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore windows/TinyHand.sln
+
+      - name: Build (Release)
+        run: dotnet build windows/TinyHand.sln -c Release --no-restore
+
+      - name: Publish (self-contained single file, win-x64)
+        run: >
+          dotnet publish windows/TinyHand/TinyHand.csproj -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true -p:DebugType=none -o publish
+
+      - name: Self tests (rendering)
+        run: |
+          New-Item -ItemType Directory -Force selftest | Out-Null
+          $exe = (Resolve-Path publish\TinyHand.exe).Path
+          function Run-Test([string[]] $testArgs) {
+            $p = Start-Process -FilePath $exe -ArgumentList $testArgs -Wait -PassThru -WorkingDirectory (Resolve-Path selftest).Path
+            Write-Host "TinyHand $($testArgs -join ' ') -> exit $($p.ExitCode)"
+            if ($p.ExitCode -ne 0) {
+              if (Test-Path selftest\selftest-error.txt) { Get-Content selftest\selftest-error.txt | Write-Host }
+              throw "self test failed: $($testArgs -join ' ')"
+            }
+          }
+          Run-Test @('--render-test', 'arm.png')
+          Run-Test @('--render-test', 'arm-resting.png', '--resting')
+          Run-Test @('--toolbar-test', 'toolbar.png', '--hint', '--ink')
+          Run-Test @('--welcome-test', 'welcome.png')
+          Run-Test @('--tray-test', 'tray')
+          foreach ($section in 'General', 'Pointers', 'Appearance', 'Drawing', 'Sound', 'About') {
+            Run-Test @('--settings-test', "settings-$section.png", $section)
+          }
+          Run-Test @('--settings-test', 'settings-Pointers-dark.png', 'Pointers', '--dark')
+          Get-ChildItem selftest -Recurse | Format-Table Name, Length
+
+      - name: Self test (end to end on the runner desktop)
+        continue-on-error: true
+        timeout-minutes: 5
+        run: |
+          $exe = (Resolve-Path publish\TinyHand.exe).Path
+          $p = Start-Process -FilePath $exe -ArgumentList @('--e2e-test', 'e2e.txt') -Wait -PassThru -WorkingDirectory (Resolve-Path selftest).Path
+          if (Test-Path selftest\e2e.txt) { Get-Content selftest\e2e.txt | Write-Host }
+          if ($p.ExitCode -ne 0) { throw "end-to-end test failed ($($p.ExitCode))" }
+
+      - name: Upload self-test output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: selftest
+          path: selftest/
+          if-no-files-found: ignore
+
+      - name: Zip
+        run: |
+          New-Item -ItemType Directory -Force dist\TinyHand | Out-Null
+          Copy-Item publish\TinyHand.exe dist\TinyHand\
+          Copy-Item windows\README.md dist\TinyHand\README.md
+          Copy-Item LICENSE dist\TinyHand\LICENSE.txt
+          Compress-Archive -Path dist\TinyHand\* -DestinationPath TinyHand-win-x64.zip -CompressionLevel Optimal
+          Get-FileHash TinyHand-win-x64.zip -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  TinyHand-win-x64.zip" } | Set-Content TinyHand-win-x64.zip.sha256
+          Get-Item TinyHand-win-x64.zip | Format-Table Name, Length
+          Get-Content TinyHand-win-x64.zip.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TinyHand-win-x64
+          path: |
+            TinyHand-win-x64.zip
+            TinyHand-win-x64.zip.sha256
+
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/win-v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $version = $tag.Substring(5)
+          $notes = Get-Content windows\RELEASE_NOTES.md -Raw
+          gh release create $tag TinyHand-win-x64.zip TinyHand-win-x64.zip.sha256 `
+            --repo $env:GITHUB_REPOSITORY --title "TinyHand for Windows $version" --notes $notes
