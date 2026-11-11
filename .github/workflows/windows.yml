@@ -2,7 +2,7 @@ name: Windows
 
 on:
   push:
-    branches: [windows-port, 'claude/**']
+    branches: [windows-port]
     tags: ['win-v*']
     paths:
       - 'windows/**'
