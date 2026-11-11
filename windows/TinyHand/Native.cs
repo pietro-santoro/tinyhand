@@ -427,6 +427,12 @@ namespace TinyHand
         [DllImport("user32.dll")]
         public static extern IntPtr GetDC(IntPtr hWnd);
 
+        public const uint SRCCOPY = 0x00CC0020;
+        public const uint CAPTUREBLT = 0x40000000;
+
+        [DllImport("gdi32.dll")]
+        public static extern bool BitBlt(IntPtr hdc, int x, int y, int cx, int cy, IntPtr hdcSrc, int x1, int y1, uint rop);
+
         [DllImport("user32.dll")]
         public static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
 

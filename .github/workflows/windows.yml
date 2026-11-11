@@ -85,6 +85,24 @@ jobs:
           path: selftest/
           if-no-files-found: ignore
 
+      # Temporary: lets the port be reviewed from an environment that can't download artifacts.
+      - name: Share screenshots on the ci-screenshots branch
+        if: always() && github.ref == 'refs/heads/windows-port'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $shots = Join-Path $env:RUNNER_TEMP 'shots'
+          New-Item -ItemType Directory -Force $shots | Out-Null
+          Copy-Item selftest\* $shots -Recurse
+          Set-Location $shots
+          git init -q -b ci-screenshots
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -q -m "Self-test screenshots for $env:GITHUB_SHA"
+          git push -q -f "https://x-access-token:$env:GH_TOKEN@github.com/$env:GITHUB_REPOSITORY.git" ci-screenshots
+
       - name: Zip
         run: |
           New-Item -ItemType Directory -Force dist\TinyHand | Out-Null

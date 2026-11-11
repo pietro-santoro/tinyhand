@@ -200,7 +200,12 @@ namespace TinyHand
                 using var bmp = new Bitmap(vw, vh, PixelFormat.Format32bppArgb);
                 using (var g = Graphics.FromImage(bmp))
                 {
-                    g.CopyFromScreen(vx, vy, 0, 0, new System.Drawing.Size(vw, vh), CopyPixelOperation.SourceCopy | CopyPixelOperation.CaptureBlt);
+                    // CAPTUREBLT includes layered windows such as the overlay.
+                    IntPtr dest = g.GetHdc();
+                    IntPtr screen = Native.GetDC(IntPtr.Zero);
+                    Native.BitBlt(dest, 0, 0, vw, vh, screen, vx, vy, Native.SRCCOPY | Native.CAPTUREBLT);
+                    Native.ReleaseDC(IntPtr.Zero, screen);
+                    g.ReleaseHdc(dest);
                 }
                 bmp.Save(path, ImageFormat.Png);
                 Line($"screenshot {path} {vw}x{vh}");
