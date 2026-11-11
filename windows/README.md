@@ -135,7 +135,9 @@ sono ridotte a 1024 px di altezza (≈150 KB l'una invece di ≈2 MB).
 
 La CI (`.github/workflows/windows.yml`, `windows-latest`) compila, pubblica, esegue i self-test
 (render delle 37 frecce/mani, toolbar, impostazioni, welcome, icone e un test end-to-end con input
-simulato), crea `TinyHand-win-x64.zip` e, sui tag `win-v*`, pubblica la Release.
+simulato), crea `TinyHand-win-x64.zip` e pubblica la Release `win-v<versione>`: o pushando un tag
+`win-v*`, o alzando `<Version>` in `TinyHand.csproj` sul branch `windows-port` (la release e il tag
+vengono creati dalla CI una sola volta per versione).
 
 ## Limitazioni note e differenze dal Mac
 
