@@ -1371,6 +1371,10 @@ namespace TinyHand
         {
             Theme.Force(dark);
             section = target;
+            foreach (var style in PointerStyle.All)
+            {
+                if (style.AssetName != null) HandAsset.Thumbnail(style.AssetName);
+            }
             if (root == null)
             {
                 Build();

@@ -410,6 +410,7 @@ namespace TinyHand
                 return;
             }
             var state = g.Save();
+            using var baseTransform = g.Transform; // identity on the overlay, a cell offset in the render test
             g.InterpolationMode = InterpolationMode.HighQualityBilinear;
             g.PixelOffsetMode = PixelOffsetMode.HighQuality;
             g.SmoothingMode = SmoothingMode.AntiAlias;
@@ -437,20 +438,29 @@ namespace TinyHand
             attrs.SetWrapMode(WrapMode.TileFlipXY);
 
             // Rod with its shadow, then the hand with its shadow (the hand's shadow falls on the rod).
-            DrawShadow(g, RodDest, rodSrc, extendTop: false);
-            using (var m = ArmMatrix())
+            DrawShadow(g, baseTransform, RodDest, rodSrc, extendTop: false);
+            using (var m = Combine(baseTransform, ArmMatrix()))
             {
                 g.Transform = m;
                 g.DrawImage(display, ToPoints(RodDest(rodSrc)), rodSrc, GraphicsUnit.Pixel, attrs);
             }
-            g.ResetTransform();
-            DrawShadow(g, HandDest, handSrc, extendTop: true);
-            using (var m = ArmMatrix())
+            g.Transform = baseTransform;
+            DrawShadow(g, baseTransform, HandDest, handSrc, extendTop: true);
+            using (var m = Combine(baseTransform, ArmMatrix()))
             {
                 g.Transform = m;
                 g.DrawImage(display, ToPoints(HandDest(handSrc)), handSrc, GraphicsUnit.Pixel, attrs);
             }
             g.Restore(state);
+        }
+
+        /// <summary>Arm space -> overlay (<paramref name="arm"/>) -> whatever the Graphics already had.</summary>
+        private static Matrix Combine(Matrix baseTransform, Matrix arm)
+        {
+            var m = baseTransform.Clone();
+            m.Multiply(arm, MatrixOrder.Prepend);
+            arm.Dispose();
+            return m;
         }
 
         private static PointF[] ToPoints(RectangleF r) =>
@@ -460,7 +470,7 @@ namespace TinyHand
         /// Blurred silhouette, offset down and to the right (the Mac's lift), crossfading between
         /// the rest and pressed blur as the hand presses.
         /// </summary>
-        private void DrawShadow(Graphics g, Func<RectangleF, RectangleF> dest, RectangleF src, bool extendTop)
+        private void DrawShadow(Graphics g, Matrix baseTransform, Func<RectangleF, RectangleF> dest, RectangleF src, bool extendTop)
         {
             if (pose.ShadowOpacity <= 0 || restShadow == null || pressShadow == null)
             {
@@ -468,7 +478,7 @@ namespace TinyHand
             }
             double p = Math.Clamp(pose.Press, 0, 1);
             var layers = new[] { (restShadow, (1 - p) * pose.ShadowOpacity), (pressShadow, p * pose.ShadowOpacity) };
-            using var m = ArmMatrix(pose.Lift * 0.6, pose.Lift);
+            using var m = Combine(baseTransform, ArmMatrix(pose.Lift * 0.6, pose.Lift));
             g.Transform = m;
             foreach (var (sprite, opacity) in layers)
             {
@@ -485,7 +495,7 @@ namespace TinyHand
                 attrs.SetColorMatrix(new ColorMatrix { Matrix33 = (float)opacity });
                 g.DrawImage(sprite.Bitmap, ToPoints(dest(padded)), spriteSrc, GraphicsUnit.Pixel, attrs);
             }
-            g.ResetTransform();
+            g.Transform = baseTransform;
         }
 
         private void DrawLaser(Graphics g)

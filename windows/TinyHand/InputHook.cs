@@ -210,7 +210,7 @@ namespace TinyHand
         {
             if (action != null)
             {
-                dispatcher.BeginInvoke(DispatcherPriority.Input, action);
+                dispatcher.BeginInvoke(DispatcherPriority.Normal, action);
             }
         }
 
@@ -302,7 +302,7 @@ namespace TinyHand
                 {
                     var pt = info.pt;
                     var cb = OnPassThroughPress;
-                    if (cb != null) dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() => cb(pt)));
+                    if (cb != null) dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() => cb(pt)));
                 }
             }
             if (passingThrough)
@@ -369,7 +369,7 @@ namespace TinyHand
                             lastWin = win;
                             var snapshot = new ModifierSnapshot(shift, ctrl, alt, win, InputCount);
                             var cb = OnModifiersChanged;
-                            if (cb != null) dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() => cb(snapshot)));
+                            if (cb != null) dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() => cb(snapshot)));
                             if (wakeOnMove)
                             {
                                 wakeOnMove = false;
