@@ -375,23 +375,42 @@ namespace TinyHand
     {
         public event Action Click;
         public event Action<bool> Hovered;
-        public Brush Normal;
-        public Brush Hover;
+        private Brush normal;
+        private Brush hover;
         private bool pressed;
+        private bool over;
+
+        /// <summary>Background when idle; applied right away (not only once loaded).</summary>
+        public Brush Normal
+        {
+            get => normal;
+            set
+            {
+                normal = value;
+                if (!over && value != null) Background = value;
+            }
+        }
+
+        public Brush Hover
+        {
+            get => hover;
+            set
+            {
+                hover = value;
+                if (over && value != null) Background = value;
+            }
+        }
 
         public Clickable()
         {
             Focusable = false;
             Background = Brushes.Transparent;
-            Loaded += (s, e) =>
-            {
-                if (Normal != null) Background = Normal;
-            };
         }
 
         protected override void OnMouseEnter(MouseEventArgs e)
         {
             base.OnMouseEnter(e);
+            over = true;
             if (Hover != null) Background = Hover;
             Hovered?.Invoke(true);
         }
@@ -399,6 +418,7 @@ namespace TinyHand
         protected override void OnMouseLeave(MouseEventArgs e)
         {
             base.OnMouseLeave(e);
+            over = false;
             if (Normal != null) Background = Normal;
             Hovered?.Invoke(false);
         }
